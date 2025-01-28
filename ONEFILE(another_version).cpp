@@ -5,17 +5,18 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-
+#include <array>
 // Yapılar ve global değişkenler
 struct Vector3 { float x, y, z; };
 struct Block { int x, y, z; };
 
 // Bloklar ve renkleri
-std::map<std::tuple<int, int, int>, Vector3> blocks;
+int sel=1;
+std::map<std::tuple<int, int, int>, std::array<Vector3, 6>> blocks;
 bool keys[256];
 int mx, my;
 float yaw = 0.0f, pitch = 0.0f;
-Vector3 position = {0.0f, 1.0f, 0.0f};
+Vector3 position = {0.0f, 2.0f, 0.0f};
 Vector3 front = {0.0f, 0.0f, -1.0f};
 Vector3 right = {1.0f, 0.0f, 0.0f};
 const float speed = 0.1f;
@@ -52,13 +53,36 @@ void drawCircle(float x, float y, float radius, float r, float g, float b) {
     glEnd();
 }
 
-// Rastgele renk üretme
-Vector3 getRandomColor() {
-    return {
-        static_cast<float>(rand()) / RAND_MAX,
-        static_cast<float>(rand()) / RAND_MAX,
-        static_cast<float>(rand()) / RAND_MAX
-    };
+// Rastgele 6 renk üretme
+std::array<Vector3, 6> getColor() {
+    std::array<Vector3, 6> colors;
+    if (sel==1) {
+        // Çim bloğu
+        colors[2] = {0.0f, 1.0f, 0.0f}; // Üst yüz (yeşil)
+        colors[0] = {0.55f, 0.27f, 0.07f}; // Ön yüz (kahverengi)
+        colors[1] = {0.55f, 0.27f, 0.07f}; // Arka yüz (kahverengi)
+        colors[3] = {0.55f, 0.27f, 0.07f}; // Alt yüz (kahverengi)
+        colors[4] = {0.55f, 0.27f, 0.07f}; // Sağ yüz (kahverengi)
+        colors[5] = {0.55f, 0.27f, 0.07f}; // Sol yüz (kahverengi)
+    }else if (sel==2) {
+        // taş bloğu
+        colors[2] = {0.7f, 0.7f, 0.7f}; // Üst yüz (yeşil)
+        colors[0] = {0.7f, 0.7f, 0.7f}; // Ön yüz (yeşil)
+        colors[1] = {0.7f, 0.7f, 0.7f}; // Arka yüz (yeşil)
+        colors[3] = {0.7f, 0.7f, 0.7f}; // Alt yüz (kahverengi)
+        colors[4] = {0.7f, 0.7f, 0.7f}; // Sağ yüz (kahverengi)
+        colors[5] = {0.7f, 0.7f, 0.7f}; // Sol yüz (kahverengi)
+    } else {
+        // Rastgele renk
+        for (int i = 0; i < 6; ++i) {
+            colors[i] = {
+                static_cast<float>(rand()) / RAND_MAX,
+                static_cast<float>(rand()) / RAND_MAX,
+                static_cast<float>(rand()) / RAND_MAX
+            };
+        }
+    }
+    return colors;
 }
 
 // Blokları başlat
@@ -66,10 +90,9 @@ void initBlocks() {
     srand(static_cast<unsigned int>(time(0))); // Rastgelelik için seed
     for(int x = -100; x <= 100; x++)
         for(int z = -100; z <= 100; z++)
-            blocks[{x, 0, z}] = getRandomColor(); // Her blok için rastgele renk
-    blocks[{0, 1, 5}] = getRandomColor();
+            blocks[{x, 0, z}] = getColor(); // Her blok için 6 rastgele renk
+    blocks[{0, 1, 5}] = getColor();
 }
-
 // Çarpışma kontrolü
 bool checkCollision(float x, float y, float z) {
     int px1 = static_cast<int>(std::round(x-0.25));
@@ -105,10 +128,22 @@ void keyboard(unsigned char key, int, int) {
     keys[key] = true;
     // Yeni: Space tuşu için zıplama kontrolü
     if(key == ' ') {
-        bool onGround = checkCollision(position.x, position.y - 1.0f, position.z);
+        bool onGround = checkCollision(position.x, position.y-1, position.z)||checkCollision(position.x, position.y-2, position.z);
         if(onGround) {
             velocityY = jumpForce;
         }
+    }
+    if(key == '1') {
+        sel=1;
+    }
+    if(key == '2') {
+        sel=2;
+    }
+    if(key == '3') {
+        sel=3;
+    }
+    if(key == '4') {
+        sel=4;
     }
 }
 
@@ -195,14 +230,14 @@ void mouseClick(int button, int state, int x, int y) {
                 int newZ = pz + static_cast<int>(normal.z);
 
                 if (!blocks.count({newX, newY, newZ})) {
-                    blocks[{newX, newY, newZ}] = getRandomColor(); // Yeni blok için rastgele renk
+                    blocks[{newX, newY, newZ}] = getColor(); // Yeni blok için rastgele renk
                     glutPostRedisplay();
                 }
                 break;
             }
         }
     }
-     while(checkCollision(position.x,position.y-0.5,position.z)) position.y+=0.01;
+    while(checkCollision(position.x,position.y-0.5,position.z)|| checkCollision(position.x,position.y-1.5,position.z)) position.y+=0.01;
 }
 
 // Hareket güncelleme
@@ -228,7 +263,7 @@ void update() {
     newPos.y += velocityY;
 
     // Zemin kontrolü
-    bool onGround = checkCollision(newPos.x, newPos.y - 0.5f, newPos.z);
+    bool onGround = checkCollision(newPos.x, newPos.y - 0.5f, newPos.z) || checkCollision(position.x,position.y-1.5,position.z);
 
     if (onGround) {
         newPos.y = std::floor(newPos.y); // Zemine sabitle
@@ -236,9 +271,9 @@ void update() {
     } else {
         position.y = newPos.y; // Havada serbest düşüş
     }
-	while(checkCollision(position.x,position.y-0.5,position.z)) position.y+=0.01;
+	while(checkCollision(position.x,position.y-1.5,position.z) || checkCollision(position.x,position.y-0.5,position.z)) position.y+=0.01;
     // Çarpışma kontrolleri
-    if (!checkCollision(newPos.x, position.y, newPos.z)) {
+    if ((!checkCollision(newPos.x, position.y, newPos.z)) || (!checkCollision(newPos.x, position.y-1, newPos.z))) {
         position.x = newPos.x;
         position.z = newPos.z;
     }
@@ -246,45 +281,54 @@ void update() {
     glutPostRedisplay();
 }
 
-// Blok çizme (tüm yüzler aynı renk)
-void drawBlock(int x, int y, int z, const Vector3& color) {
+// Blok çizme (her kenar farklı renk)
+void drawBlock(int x, int y, int z, const std::array<Vector3, 6>& colors, float distance) {
     glPushMatrix();
     glTranslatef(x, y, z);
-    glColor3f(color.x, color.y, color.z); // Bloğun rengi
-
-    // Tüm yüzler aynı renk
+    
+    // Atmosferik perspektif için renk hesapla
+    float fadeFactor = 1.0f - (log(distance) / 7.0f); // 50 birim uzaklığa kadar renk kaybeder
+    fadeFactor = std::max(0.5f, fadeFactor); // En düşük renk değeri 0.2
+    
+    // Tüm yüzler farklı renk
     glBegin(GL_QUADS);
-        // Ön yüz
+        // Ön yüz (0)
+        glColor3f(colors[0].x * fadeFactor, colors[0].y * fadeFactor, colors[0].z * fadeFactor);
         glVertex3f(-0.5f, -0.5f,  0.5f);
         glVertex3f( 0.5f, -0.5f,  0.5f);
         glVertex3f( 0.5f,  0.5f,  0.5f);
         glVertex3f(-0.5f,  0.5f,  0.5f);
 
-        // Arka yüz
+        // Arka yüz (1)
+        glColor3f(colors[1].x * fadeFactor, colors[1].y * fadeFactor, colors[1].z * fadeFactor);
         glVertex3f(-0.5f, -0.5f, -0.5f);
         glVertex3f( 0.5f, -0.5f, -0.5f);
         glVertex3f( 0.5f,  0.5f, -0.5f);
         glVertex3f(-0.5f,  0.5f, -0.5f);
 
-        // Üst yüz
+        // Üst yüz (2)
+        glColor3f(colors[2].x * fadeFactor, colors[2].y * fadeFactor, colors[2].z * fadeFactor);
         glVertex3f(-0.5f,  0.5f, -0.5f);
         glVertex3f( 0.5f,  0.5f, -0.5f);
         glVertex3f( 0.5f,  0.5f,  0.5f);
         glVertex3f(-0.5f,  0.5f,  0.5f);
 
-        // Alt yüz
+        // Alt yüz (3)
+        glColor3f(colors[3].x * fadeFactor, colors[3].y * fadeFactor, colors[3].z * fadeFactor);
         glVertex3f(-0.5f, -0.5f, -0.5f);
         glVertex3f( 0.5f, -0.5f, -0.5f);
         glVertex3f( 0.5f, -0.5f,  0.5f);
         glVertex3f(-0.5f, -0.5f,  0.5f);
 
-        // Sağ yüz
+        // Sağ yüz (4)
+        glColor3f(colors[4].x * fadeFactor, colors[4].y * fadeFactor, colors[4].z * fadeFactor);
         glVertex3f( 0.5f, -0.5f, -0.5f);
         glVertex3f( 0.5f,  0.5f, -0.5f);
         glVertex3f( 0.5f,  0.5f,  0.5f);
         glVertex3f( 0.5f, -0.5f,  0.5f);
 
-        // Sol yüz
+        // Sol yüz (5)
+        glColor3f(colors[5].x * fadeFactor, colors[5].y * fadeFactor, colors[5].z * fadeFactor);
         glVertex3f(-0.5f, -0.5f, -0.5f);
         glVertex3f(-0.5f,  0.5f, -0.5f);
         glVertex3f(-0.5f,  0.5f,  0.5f);
@@ -293,12 +337,11 @@ void drawBlock(int x, int y, int z, const Vector3& color) {
 
     glPopMatrix();
 }
-
 // Ekran çizme
 void drawText(const char* text, float x, float y, float r, float g, float b) {
     glColor3f(r, g, b); // Yazı rengini ayarla
     glRasterPos2f(x, y); // Metnin ekran konumunu ayarla
-    for (const char* c = text; *c != '\0'; ++c) {
+    for (const char* c = text; *c!= '\0'; ++c) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c); // Her karakteri çiz
     }
 }
@@ -317,8 +360,15 @@ void display() {
         int x = std::get<0>(block.first);
         int y = std::get<1>(block.first);
         int z = std::get<2>(block.first);
-        Vector3 color = block.second;
-        drawBlock(x, y, z, color);
+        std::array<Vector3,6> color = block.second;
+        
+        // Kameradan bloğa olan uzaklığı hesapla
+        float dx = x - position.x;
+        float dy = y - position.y;
+        float dz = z - position.z;
+        float distance = sqrt(dx * dx + dy * dy + dz * dz);
+        
+        drawBlock(x, y, z, color, distance);
     }
     
     // 2D metin çizim moduna geç
