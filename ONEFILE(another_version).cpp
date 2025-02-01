@@ -271,7 +271,7 @@ void update() {
     } else {
         position.y = newPos.y; // Havada serbest düşüş
     }
-	while(checkCollision(position.x,position.y-1.5,position.z) || checkCollision(position.x,position.y-0.5,position.z)) position.y+=0.01;
+	while(checkCollision(position.x,position.y-1.5,position.z) || checkCollision(position.x,position.y-0.5,position.z)) position.y+=0.0001;
     // Çarpışma kontrolleri
     if ((!checkCollision(newPos.x, position.y, newPos.z)) || (!checkCollision(newPos.x, position.y-1, newPos.z))) {
         position.x = newPos.x;
